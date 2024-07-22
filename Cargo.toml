@@ -1,0 +1,9 @@
+[package]
+name = "word_freq_counter"
+version = "0.1.0"
+authors = ["Garth <g-art-h@outlook.com>"]
+edition = "2021"
+
+[dependencies]
+dashmap = "6.0.1"
+rayon = "1.10.0"
