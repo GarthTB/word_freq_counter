@@ -1,10 +1,13 @@
-use std::collections::HashSet;
+use std::collections::{HashSet, VecDeque};
 use std::fs::File;
 use std::io::{self, stdin, BufRead, BufReader, Write};
 use std::path::Path;
 
 use dashmap::DashMap;
 use rayon::prelude::*;
+
+const UTF_LOWER_LIMIT: char = '䷿';
+const UTF_UPPER_LIMIT: char = 'ꀀ';
 
 fn read_input<T: std::str::FromStr>(prompt: &str) -> io::Result<T> {
     println!("{prompt}");
@@ -20,23 +23,20 @@ fn read_input<T: std::str::FromStr>(prompt: &str) -> io::Result<T> {
 }
 
 fn get_threshold() -> usize {
-    println!("请输入次数阈值，低于该数则忽略，默认为2：");
+    println!("请输入过滤次数，不超过该数则忽略，默认为1：");
     let mut input = String::new();
     if stdin().read_line(&mut input).is_ok() {
         match input.trim().parse::<usize>() {
-            Ok(num) if num > 0 => num,
-            _ => 2,
+            Ok(num) => num,
+            _ => 1,
         }
     } else {
-        2
+        1
     }
 }
 
 fn remove_chinese(input: &str) -> HashSet<char> {
-    input
-        .chars()
-        .filter(|c| *c < '\u{4e00}' || *c > '\u{9fff}')
-        .collect()
+    input.chars().filter(|c| *c < '一' || *c > '鿿').collect()
 }
 
 fn count_combinations(
@@ -48,17 +48,17 @@ fn count_combinations(
     let reader = BufReader::new(file);
 
     let lines: Vec<String> = reader.lines().collect::<Result<_, _>>()?;
-    let combinations: DashMap<String, usize> = DashMap::new();
+    let combinations: DashMap<String, usize> = DashMap::with_capacity(131072);
 
     if extra_chars.is_empty() {
         lines.into_par_iter().for_each(|line| {
-            let mut window: Vec<char> = Vec::with_capacity(n);
+            let mut window: VecDeque<char> = VecDeque::with_capacity(n);
             for c in line.chars() {
-                if c >= '一' && c <= '鿿' {
-                    window.push(c);
+                if c > UTF_LOWER_LIMIT && c < UTF_UPPER_LIMIT {
+                    window.push_back(c);
                     if window.len() == n {
                         *combinations.entry(window.iter().collect()).or_insert(0) += 1;
-                        window.remove(0);
+                        window.pop_front();
                     }
                 } else {
                     window.clear();
@@ -67,13 +67,13 @@ fn count_combinations(
         });
     } else {
         lines.into_par_iter().for_each(|line| {
-            let mut window: Vec<char> = Vec::with_capacity(n);
+            let mut window: VecDeque<char> = VecDeque::with_capacity(n);
             for c in line.chars() {
-                if (c >= '一' && c <= '鿿') || extra_chars.contains(&c) {
-                    window.push(c);
+                if c > UTF_LOWER_LIMIT && c < UTF_UPPER_LIMIT || extra_chars.contains(&c) {
+                    window.push_back(c);
                     if window.len() == n {
                         *combinations.entry(window.iter().collect()).or_insert(0) += 1;
-                        window.remove(0);
+                        window.pop_front();
                     }
                 } else {
                     window.clear();
@@ -83,32 +83,6 @@ fn count_combinations(
     }
 
     Ok(combinations)
-}
-
-#[inline(always)]
-fn analyze_word(
-    n: usize,
-    threshold: usize,
-    combinations: &DashMap<String, usize>,
-    words: &DashMap<String, usize>,
-    window: &mut Vec<char>,
-) {
-    let mut max_word = String::with_capacity(n);
-    let mut max_freq: usize = 0;
-
-    for _ in 0..n {
-        let word: String = window.iter().take(n).collect();
-        let freq: usize = *combinations.get(&word).unwrap();
-        if freq >= threshold && freq > max_freq {
-            max_word = word;
-            max_freq = freq;
-        }
-        window.remove(0);
-    }
-
-    if max_freq > 0 {
-        *words.entry(max_word).or_insert(0) += 1;
-    }
 }
 
 fn count_words(
@@ -122,18 +96,37 @@ fn count_words(
     let reader = BufReader::new(file);
 
     let lines: Vec<String> = reader.lines().collect::<Result<_, _>>()?;
-    let words: DashMap<String, usize> = DashMap::new();
+    let words: DashMap<String, usize> = DashMap::with_capacity(65536);
 
     let range = 2 * n - 1;
 
     if extra_chars.is_empty() {
         lines.into_par_iter().for_each(|line| {
-            let mut window: Vec<char> = Vec::with_capacity(range);
+            let mut window: VecDeque<char> = VecDeque::with_capacity(range);
+            let mut max_word: String = String::with_capacity(n);
+            let mut max_freq: usize;
+            let mut word: String;
+            let mut freq: usize;
+
             for c in line.chars() {
-                if c >= '一' && c <= '鿿' {
-                    window.push(c);
+                if c > UTF_LOWER_LIMIT && c < UTF_UPPER_LIMIT {
+                    window.push_back(c);
                     if window.len() == range {
-                        analyze_word(n, threshold, &combinations, &words, &mut window);
+                        max_freq = 0;
+
+                        for _ in 0..n {
+                            word = window.iter().take(n).collect();
+                            freq = *combinations.get(&word).unwrap();
+                            if freq > max_freq && freq > threshold {
+                                max_word = word;
+                                max_freq = freq;
+                            }
+                            window.pop_front();
+                        }
+
+                        if max_freq > 0 {
+                            *words.entry(max_word.clone()).or_insert(0) += 1;
+                        }
                     }
                 } else {
                     window.clear();
@@ -142,12 +135,31 @@ fn count_words(
         });
     } else {
         lines.into_par_iter().for_each(|line| {
-            let mut window: Vec<char> = Vec::with_capacity(range);
+            let mut window: VecDeque<char> = VecDeque::with_capacity(range);
+            let mut max_word: String = String::with_capacity(n);
+            let mut max_freq: usize;
+            let mut word: String;
+            let mut freq: usize;
+
             for c in line.chars() {
-                if c >= '一' && c <= '鿿' || extra_chars.contains(&c) {
-                    window.push(c);
+                if c > UTF_LOWER_LIMIT && c < UTF_UPPER_LIMIT || extra_chars.contains(&c) {
+                    window.push_back(c);
                     if window.len() == range {
-                        analyze_word(n, threshold, &combinations, &words, &mut window);
+                        max_freq = 0;
+
+                        for _ in 0..n {
+                            word = window.iter().take(n).collect();
+                            freq = *combinations.get(&word).unwrap();
+                            if freq > max_freq && freq > threshold {
+                                max_word = word;
+                                max_freq = freq;
+                            }
+                            window.pop_front();
+                        }
+
+                        if max_freq > 0 {
+                            *words.entry(max_word.clone()).or_insert(0) += 1;
+                        }
                     }
                 } else {
                     window.clear();
@@ -188,12 +200,12 @@ fn main() -> io::Result<()> {
         let n = read_input::<usize>("请输入词长：")?;
         let extra_chars = remove_chinese(&read_input::<String>("请输入要纳入的非汉字（输入为一行）：")?);
         let threshold = get_threshold();
-        println!("使用阈值：{threshold}\n逐字统计中...");
+        println!("过滤次数：{threshold}\n逐字统计中...");
         let combinations = count_combinations(&file_path, n, &extra_chars)?;
         println!("逐字统计完成，进行盲分词统计...");
         let words = count_words(&file_path, n, &extra_chars, threshold, combinations)?;
         println!("盲分词统计完成，筛选中...");
-        words.retain(|_, &mut value| value >= threshold);
+        words.retain(|_, &mut value| value > threshold);
         println!("筛选完成，输出中...");
         write_results(&file_path, n, sort_words(words))?;
         println!("输出完成，再来一次！\n");
