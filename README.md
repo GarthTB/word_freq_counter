@@ -4,7 +4,7 @@
 
 经测试，个人笔记本，10亿字微博语料（来源忘了），统计2字词，16线程，1分15秒出结果。
 
-### [相同原理、相似性能、依赖.NET6运行时的C#版](https://github.com/GarthTB/WordFreqCounter/edit/master/README.md)
+### [相同原理、相似性能、依赖.NET6运行时的C#版](https://github.com/GarthTB/WordFreqCounter)
 
 | 粗略比较 | 第一轮用时 | 两轮共用时 |
 | :- | :-: | :-: |
