@@ -35,10 +35,8 @@ fn main() {
         let (file_path, n, threshold, extra_chars) = settings::get();
         println!("逐字统计中...");
         let groups = counter::count_groups(&file_path, n, &extra_chars);
-        println!("逐字统计完成，筛选中...");
-        groups.retain(|_, &mut value| value > threshold);
-        println!("筛选完成，进行盲分词统计...");
-        let words = counter::count_words(&file_path, n, &extra_chars, threshold, groups);
+        println!("逐字统计完成，盲分词统计中...");
+        let words = counter::count_words(&file_path, n, &extra_chars, groups);
         println!("盲分词统计完成，筛选中...");
         words.retain(|_, &mut value| value > threshold);
         println!("筛选完成，输出中...");

@@ -57,7 +57,6 @@ pub fn count_words(
     file_path: &str,
     n: usize,
     extra_chars: &HashSet<char>,
-    threshold: usize,
     groups: DashMap<String, usize>,
 ) -> DashMap<String, usize> {
     let file = File::open(file_path).expect("读取文件失败");
@@ -83,11 +82,10 @@ pub fn count_words(
                         for _ in 0..n {
                             word = window.iter().take(n).collect();
                             window.pop_front();
-                            if let Some(freq) = groups.get(&word) {
-                                if *freq > max_freq && *freq > threshold {
-                                    max_word = word;
-                                    max_freq = *freq;
-                                }
+                            let freq = groups.get(&word).expect("找不到逐字统计的结果");
+                            if *freq > max_freq {
+                                max_word = word;
+                                max_freq = *freq;
                             }
                         }
 
@@ -116,11 +114,10 @@ pub fn count_words(
                         for _ in 0..n {
                             word = window.iter().take(n).collect();
                             window.pop_front();
-                            if let Some(freq) = groups.get(&word) {
-                                if *freq > max_freq && *freq > threshold {
-                                    max_word = word;
-                                    max_freq = *freq;
-                                }
+                            let freq = groups.get(&word).expect("找不到逐字统计的结果");
+                            if *freq > max_freq {
+                                max_word = word;
+                                max_freq = *freq;
                             }
                         }
 
