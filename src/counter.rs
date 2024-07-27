@@ -21,7 +21,7 @@ pub fn count_groups(
     if extra_chars.is_empty() {
         reader.lines().par_bridge().for_each(|line| {
             let mut window: VecDeque<char> = VecDeque::with_capacity(n);
-            for c in line.expect("读取文件的行失败").chars() {
+            for c in line.unwrap().chars() {
                 if c > UTF_LOWER_LIMIT && c < UTF_UPPER_LIMIT {
                     window.push_back(c);
                     if window.len() == n {
@@ -36,7 +36,7 @@ pub fn count_groups(
     } else {
         reader.lines().par_bridge().for_each(|line| {
             let mut window: VecDeque<char> = VecDeque::with_capacity(n);
-            for c in line.expect("读取文件的行失败").chars() {
+            for c in line.unwrap().chars() {
                 if c > UTF_LOWER_LIMIT && c < UTF_UPPER_LIMIT || extra_chars.contains(&c) {
                     window.push_back(c);
                     if window.len() == n {
@@ -73,7 +73,7 @@ pub fn count_words(
             let mut max_freq: usize;
             let mut word: String;
 
-            for c in line.expect("读取文件的行失败").chars() {
+            for c in line.unwrap().chars() {
                 if c > UTF_LOWER_LIMIT && c < UTF_UPPER_LIMIT {
                     window.push_back(c);
                     if window.len() == range {
@@ -82,7 +82,7 @@ pub fn count_words(
                         for _ in 0..n {
                             word = window.iter().take(n).collect();
                             window.pop_front();
-                            let freq = groups.get(&word).expect("找不到逐字统计的结果");
+                            let freq = groups.get(&word).unwrap();
                             if *freq > max_freq {
                                 max_word = word;
                                 max_freq = *freq;
@@ -105,7 +105,7 @@ pub fn count_words(
             let mut max_freq: usize;
             let mut word: String;
 
-            for c in line.expect("读取文件的行失败").chars() {
+            for c in line.unwrap().chars() {
                 if c > UTF_LOWER_LIMIT && c < UTF_UPPER_LIMIT || extra_chars.contains(&c) {
                     window.push_back(c);
                     if window.len() == range {
@@ -114,7 +114,7 @@ pub fn count_words(
                         for _ in 0..n {
                             word = window.iter().take(n).collect();
                             window.pop_front();
-                            let freq = groups.get(&word).expect("找不到逐字统计的结果");
+                            let freq = groups.get(&word).unwrap();
                             if *freq > max_freq {
                                 max_word = word;
                                 max_freq = *freq;
